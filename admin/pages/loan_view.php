@@ -5,6 +5,7 @@ $st->execute([$id]);
 $l = $st->fetch();
 if (!$l) { echo '<div class="alert alert-danger">ไม่พบรายการ</div>'; return; }
 $items = $pdo->prepare("SELECT * FROM cpr_loan_items WHERE loan_id = ?"); $items->execute([$id]); $items = $items->fetchAll();
+$manikins = cpr_loan_manikin_names($pdo, $id);
 $ret = $pdo->prepare("SELECT * FROM cpr_return_items WHERE loan_id = ?"); $ret->execute([$id]); $ret = $ret->fetchAll();
 $s = (int)$l['status'];
 $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
@@ -12,7 +13,7 @@ $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <a href="index.php?page=loans" class="small text-muted"><i class="bi bi-arrow-left"></i> กลับรายการ</a>
-    <h3 class="mb-0">ใบยืม #<?= $l['id'] ?> <code class="fs-6 text-brand"><?= h($l['ref_code']) ?></code></h3>
+    <h3 class="mb-0 mt-2">ใบยืม #<?= $l['id'] ?> <code class="fs-6 text-brand"><?= h($l['ref_code']) ?></code></h3>
   </div>
   <div class="d-flex gap-2 align-items-center">
     <?= status_badge($l) ?>
@@ -30,7 +31,8 @@ $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
         <dt class="col-sm-4 text-muted fw-normal">หน่วยงาน</dt><dd class="col-sm-8"><?= h($l['department']) ?></dd>
         <dt class="col-sm-4 text-muted fw-normal">ภารกิจ/โครงการ</dt><dd class="col-sm-8"><?= h($l['purpose']) ?></dd>
         <dt class="col-sm-4 text-muted fw-normal">ระยะเวลา</dt><dd class="col-sm-8"><?= thdate($l['date_from']) ?> – <?= thdate($l['date_to']) ?> (<?= (int)$l['total_days'] ?> วัน)</dd>
-        <dt class="col-sm-4 text-muted fw-normal">หุ่น CPR</dt><dd class="col-sm-8"><?= (int)$l['cpr_qty'] ?> ตัว</dd>
+        <dt class="col-sm-4 text-muted fw-normal">หุ่น CPR</dt>
+        <dd class="col-sm-8"><?php if ($manikins): ?><?= implode('<br>', array_map('h', $manikins)) ?><?php else: ?><?= (int)$l['cpr_qty'] ?> ตัว (รายการเดิมไม่ระบุชื่อ)<?php endif; ?></dd>
         <dt class="col-sm-4 text-muted fw-normal">อุปกรณ์เพิ่มเติม</dt>
         <dd class="col-sm-8"><?php foreach ($items as $x) echo h($x['item_name']) . ' × ' . (int)$x['qty'] . '<br>'; if (!$items) echo '-'; ?></dd>
         <dt class="col-sm-4 text-muted fw-normal">กำหนดส่งคืน</dt><dd class="col-sm-8"><?= thdate($l['due_date']) ?></dd>

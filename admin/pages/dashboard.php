@@ -43,7 +43,7 @@ $cards = [
       <div class="d-flex align-items-end gap-2 mt-3"><span class="display-4 fw-semibold lh-1"><?= $avail ?></span><span class="text-muted mb-1">/ <?= $total ?> ตัว ว่าง</span></div>
       <div class="progress mt-3" style="height:10px"><div class="progress-bar bg-danger" style="width:<?= $total ? round(($total - $avail) / $total * 100) : 0 ?>%"></div></div>
       <div class="small text-muted mt-2">ถูกยืมอยู่ <?= $total - $avail ?> ตัว</div>
-      <?php if (is_admin()): ?><a href="index.php?page=settings" class="small">แก้จำนวนหุ่นทั้งหมด</a><?php endif; ?>
+      <?php if (is_admin()): ?><a href="index.php?page=manikins" class="small">จัดการทะเบียนหุ่น</a><?php endif; ?>
     </div></div>
   </div>
   <div class="col-lg-8">

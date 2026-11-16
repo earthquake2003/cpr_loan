@@ -5,6 +5,7 @@ $st->execute([$id]);
 $l = $st->fetch();
 if (!$l) die('ไม่พบรายการ');
 $items = $pdo->prepare("SELECT * FROM cpr_loan_items WHERE loan_id = ?"); $items->execute([$id]); $items = $items->fetchAll();
+$manikins = cpr_loan_manikin_names($pdo, $id);
 $ret = $pdo->prepare("SELECT * FROM cpr_return_items WHERE loan_id = ?"); $ret->execute([$id]); $ret = $ret->fetchAll();
 function f($v, $min = 120) { return '<span class="fill" style="min-width:' . $min . 'px">' . ($v === null || $v === '' ? '&nbsp;' : h($v)) . '</span>'; }
 ?>
@@ -37,7 +38,7 @@ function f($v, $min = 120) { return '<span class="fill" style="min-width:' . $mi
   <div>นำไปใช้ในภารกิจ/โครงการ: <?= f($l['purpose'], 330) ?></div>
   <div>ระยะเวลาที่ยืม: ตั้งแต่วันที่ <?= f(thdate($l['date_from']), 110) ?> ถึงวันที่ <?= f(thdate($l['date_to']), 110) ?> (รวม <?= f($l['total_days'], 40) ?> วัน)</div>
   <div><b>รายการอุปกรณ์ที่ขอยืม</b></div>
-  <div>จำนวนหุ่น CPR ที่ยืม: <?= f($l['cpr_qty'], 70) ?> ตัว</div>
+  <div>หุ่น CPR ที่ยืม: <?= $manikins ? implode(', ', array_map('h', $manikins)) : f($l['cpr_qty'], 70) . ' ตัว (รายการเดิมไม่ระบุชื่อ)' ?></div>
   <div>อุปกรณ์ที่ยืมเพิ่มเติม:</div>
   <?php for ($i = 0; $i < 3; $i++): $x = $items[$i] ?? null; ?>
   <div style="padding-left:10px"><?= $i + 1 ?>. <?= f($x['item_name'] ?? '', 300) ?> จำนวน <?= f($x['qty'] ?? '', 60) ?> ชิ้น/ชุด</div>

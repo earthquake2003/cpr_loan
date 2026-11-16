@@ -1,4 +1,4 @@
--- ระบบยืม-คืนหุ่น CPR — รันใน phpMyAdmin (เลือกฐานข้อมูล hospital_db ก่อน)
+-- ระบบยืม-คืนหุ่น CPR — รันใน phpMyAdmin หลังเลือกฐานข้อมูล cpr_loan_db
 --
 -- ถ้าเคยรัน setup.sql เวอร์ชันก่อนหน้าแล้ว ให้รัน 3 บรรทัดนี้ก่อน (ข้อมูลใบยืมเดิมจะหาย / ตารางผู้ใช้ไม่ถูกลบ)
 -- DROP TABLE IF EXISTS cpr_return_items;
@@ -32,6 +32,28 @@ CREATE TABLE IF NOT EXISTS cpr_loans (
   INDEX (status),
   INDEX (date_from, date_to)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cpr_manikins (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  is_active TINYINT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cpr_loan_manikins (
+  loan_id INT NOT NULL,
+  manikin_id INT NOT NULL,
+  manikin_name VARCHAR(100) NOT NULL,
+  PRIMARY KEY (loan_id, manikin_id),
+  INDEX (manikin_id),
+  FOREIGN KEY (loan_id) REFERENCES cpr_loans(id) ON DELETE CASCADE,
+  FOREIGN KEY (manikin_id) REFERENCES cpr_manikins(id) ON DELETE RESTRICT
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO cpr_manikins (name) VALUES
+  ('Tommy 1'), ('Tommy 2'), ('Tommy 3'), ('Tommy 4'),
+  ('Taylor'), ('Davin'), ('Jacob'), ('Edward'), ('Madison'),
+  ('Angelina'), ('Kimberly'), ('Jasmine'), ('Alexandra'), ('Sarah'), ('Morgan');
 
 CREATE TABLE IF NOT EXISTS cpr_loan_items (       -- อุปกรณ์ที่ยืมเพิ่มเติม
   id INT AUTO_INCREMENT PRIMARY KEY,

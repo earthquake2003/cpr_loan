@@ -26,6 +26,7 @@ if ($ref !== '') {
 
 <?php if ($loan):
     $items = $pdo->prepare("SELECT * FROM cpr_loan_items WHERE loan_id = ?"); $items->execute([$loan['id']]); $items = $items->fetchAll();
+    $manikins = cpr_loan_manikin_names($pdo, $loan['id']);
     $s = (int)$loan['status'];
     $cur = [0 => 0, 1 => 2, 4 => 3, 2 => 4][$s] ?? 0;
     $steps = [['ส่งคำขอ','bi-send'], ['อนุมัติ','bi-patch-check'], ['กำลังยืม','bi-box-arrow-up-right'], ['แจ้งคืน','bi-box-arrow-in-down'], ['คืนแล้ว','bi-check2-all']];
@@ -53,7 +54,8 @@ if ($ref !== '') {
       <dt class="col-sm-4 text-muted fw-normal">หน่วยงาน</dt><dd class="col-sm-8"><?= h($loan['department']) ?></dd>
       <dt class="col-sm-4 text-muted fw-normal">ภารกิจ/โครงการ</dt><dd class="col-sm-8"><?= h($loan['purpose']) ?></dd>
       <dt class="col-sm-4 text-muted fw-normal">ช่วงเวลาที่ยืม</dt><dd class="col-sm-8"><?= thdate($loan['date_from']) ?> – <?= thdate($loan['date_to']) ?> (<?= (int)$loan['total_days'] ?> วัน)</dd>
-      <dt class="col-sm-4 text-muted fw-normal">หุ่น CPR</dt><dd class="col-sm-8"><?= (int)$loan['cpr_qty'] ?> ตัว</dd>
+      <dt class="col-sm-4 text-muted fw-normal">หุ่น CPR</dt>
+      <dd class="col-sm-8"><?php if ($manikins): ?><?= implode('<br>', array_map('h', $manikins)) ?><?php else: ?><?= (int)$loan['cpr_qty'] ?> ตัว (รายการเดิมไม่ระบุชื่อ)<?php endif; ?></dd>
       <?php if ($items): ?><dt class="col-sm-4 text-muted fw-normal">อุปกรณ์เพิ่มเติม</dt>
       <dd class="col-sm-8"><?php foreach ($items as $x) echo h($x['item_name']) . ' × ' . (int)$x['qty'] . '<br>'; ?></dd><?php endif; ?>
       <dt class="col-sm-4 text-muted fw-normal">กำหนดส่งคืน</dt><dd class="col-sm-8"><?= thdate($loan['due_date']) ?></dd>

@@ -2,7 +2,7 @@
 $old = $_SESSION['old'] ?? [];
 unset($_SESSION['old']);
 function o($k, $d = '') { global $old; return h($old[$k] ?? $d); }
-$total = cpr_total($pdo);
+$oldManikinIds = array_map('intval', (array)($old['manikin_ids'] ?? []));
 $today = date('Y-m-d');
 $oldItems = $old['item_name'] ?? [''];
 if (!$oldItems) $oldItems = [''];
@@ -54,11 +54,11 @@ if (!$oldItems) $oldItems = [''];
 
     <div class="card mb-3"><div class="card-body p-4">
       <div class="form-section-title"><span class="step-num">3</span> รายการอุปกรณ์</div>
-      <div class="row g-3 mb-3">
-        <div class="col-md-5"><div class="form-floating">
-          <input type="number" name="cpr_qty" id="qty" class="form-control" min="1" max="<?= $total ?>" value="<?= o('cpr_qty', 1) ?>" placeholder="จำนวน" required>
-          <label for="qty">จำนวนหุ่น CPR ที่ยืม (ตัว) *</label></div></div>
+      <label class="form-label">เลือกหุ่น CPR ที่ต้องการยืม *</label>
+      <div id="manikinOptions" class="row g-2 mb-2" data-selected="<?= h(implode(',', $oldManikinIds)) ?>" aria-live="polite">
+        <div class="col-12 text-muted small">เลือกช่วงวันที่ก่อน เพื่อดูหุ่นที่ว่าง</div>
       </div>
+      <div id="manikinCount" class="form-text mb-3">เลือกได้หลายตัวโดยแตะ/คลิกที่ชื่อหุ่น</div>
       <label class="form-label fw-semibold">อุปกรณ์ที่ยืมเพิ่มเติม <span class="text-muted fw-normal">(ถ้ามี)</span></label>
       <div id="extra">
         <?php foreach ($oldItems as $i => $nm): ?>
@@ -73,7 +73,7 @@ if (!$oldItems) $oldItems = [''];
 
     <div class="d-flex gap-2 justify-content-end mb-5">
       <a href="index.php" class="btn btn-light">ยกเลิก</a>
-      <button class="btn btn-brand btn-lg px-5"><i class="bi bi-send"></i> ส่งคำขอยืม</button>
+      <button type="submit" class="btn btn-brand btn-lg px-5" disabled><i class="bi bi-send"></i> ส่งคำขอยืม</button>
     </div>
   </form>
 </div>
@@ -81,26 +81,116 @@ if (!$oldItems) $oldItems = [''];
 <script>
 (function () {
   var df = document.getElementById('df'), dt = document.getElementById('dt'), days = document.getElementById('days'),
-      box = document.getElementById('availBox'), qty = document.getElementById('qty');
+      box = document.getElementById('availBox'), options = document.getElementById('manikinOptions'),
+      count = document.getElementById('manikinCount'),
+      selectedInitially = options.getAttribute('data-selected').split(',').filter(Boolean),
+      requestId = 0, loading = false;
+  var submitButton = document.querySelector('#loanForm button[type="submit"]');
+
+  function getCheckboxes() {
+    return Array.from(options.querySelectorAll('input[name="manikin_ids[]"]'));
+  }
+
+  function syncSelectionState() {
+    var checkboxes = getCheckboxes();
+    var selectedCount = checkboxes.filter(function (checkbox) { return checkbox.checked; }).length;
+    checkboxes.forEach(function (checkbox) {
+      checkbox.disabled = loading;
+      checkbox.closest('label').classList.toggle('border-primary', checkbox.checked);
+      checkbox.closest('label').classList.toggle('bg-primary-subtle', checkbox.checked);
+    });
+    count.textContent = 'เลือกแล้ว ' + selectedCount + ' ตัว';
+    submitButton.disabled = loading || selectedCount === 0;
+  }
+
+  function renderManikins(manikins, selectedIds) {
+    options.innerHTML = '';
+    if (!manikins.length) {
+      var empty = document.createElement('div');
+      empty.className = 'col-12 text-muted small';
+      empty.textContent = 'ไม่มีหุ่น CPR ที่ว่างในช่วงวันที่นี้';
+      options.appendChild(empty);
+      syncSelectionState();
+      return;
+    }
+
+    manikins.forEach(function (manikin) {
+      var column = document.createElement('div');
+      column.className = 'col-6 col-md-4 col-lg-3';
+      var label = document.createElement('label');
+      label.className = 'w-100 h-100 border rounded-3 p-3 d-flex align-items-center gap-2';
+      label.style.cursor = 'pointer';
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'manikin_ids[]';
+      checkbox.value = String(manikin.id);
+      checkbox.className = 'form-check-input m-0 flex-shrink-0';
+      checkbox.checked = selectedIds.indexOf(String(manikin.id)) !== -1;
+      checkbox.addEventListener('change', syncSelectionState);
+      var name = document.createElement('span');
+      name.textContent = manikin.name;
+      label.appendChild(checkbox);
+      label.appendChild(name);
+      column.appendChild(label);
+      options.appendChild(column);
+    });
+    syncSelectionState();
+  }
+
   function update() {
     if (df.value) dt.min = df.value;
-    if (df.value && dt.value) {
-      var n = Math.round((new Date(dt.value) - new Date(df.value)) / 86400000) + 1;
-      days.value = n > 0 ? n : '';
-      if (n > 0) check();
+    if (!df.value || !dt.value || dt.value < df.value) {
+      requestId++;
+      loading = true;
+      syncSelectionState();
+      renderManikins([], []);
+      days.value = '';
+      box.classList.add('d-none');
+      return;
     }
+    var n = Math.round((new Date(dt.value) - new Date(df.value)) / 86400000) + 1;
+    days.value = n > 0 ? n : '';
+    if (n > 0) check();
   }
+
   function check() {
-    fetch('index.php?page=api_available&from=' + df.value + '&to=' + dt.value)
-      .then(function (r) { return r.json(); })
+    var currentRequest = ++requestId;
+    loading = true;
+    syncSelectionState();
+    box.classList.remove('d-none');
+    box.textContent = 'กำลังตรวจสอบหุ่น CPR...';
+
+    fetch('index.php?page=api_available&from=' + encodeURIComponent(df.value) + '&to=' + encodeURIComponent(dt.value), { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('ตรวจสอบหุ่น CPR ไม่สำเร็จ');
+        return r.json();
+      })
       .then(function (j) {
-        if (j.error) { box.classList.add('d-none'); return; }
+        if (currentRequest !== requestId) return;
+        if (j.error || !Array.isArray(j.manikins)) throw new Error('ข้อมูลหุ่น CPR ไม่ถูกต้อง');
+        var oldSelected = getCheckboxes().filter(function (checkbox) { return checkbox.checked; })
+          .map(function (checkbox) { return checkbox.value; });
+        var selected = oldSelected.length ? oldSelected : selectedInitially;
+        loading = false;
+        var availableIds = j.manikins.map(function (item) { return String(item.id); });
+        renderManikins(j.manikins, selected.filter(function (id) { return availableIds.indexOf(id) !== -1; }));
+        selectedInitially = [];
         box.classList.remove('d-none');
         box.classList.toggle('none', j.available < 1);
         box.innerHTML = j.available > 0
-          ? '<i class="bi bi-check-circle"></i> ช่วงวันที่นี้ว่าง <b>' + j.available + '</b> ตัว (จากทั้งหมด ' + j.total + ' ตัว)'
+          ? '<i class="bi bi-check-circle"></i> ช่วงวันที่นี้มีหุ่นว่าง <b>' + j.available + '</b> ตัว จากทั้งหมด ' + j.total + ' ตัว'
           : '<i class="bi bi-exclamation-circle"></i> ช่วงวันที่นี้หุ่นถูกจองหมดแล้ว กรุณาเลือกช่วงอื่น';
-        qty.max = Math.max(1, j.available);
+        if (j.unnamed_reserved > 0) {
+          box.innerHTML += '<br><span class="small">มีหุ่น ' + j.unnamed_reserved + ' ตัวในใบยืมเดิมที่ยังไม่ระบุชื่อ ระบบกันจำนวนไว้แล้ว</span>';
+        }
+        if (j.manikins.length === 0) box.textContent = 'ไม่มีหุ่น CPR ที่ว่างในช่วงวันที่นี้';
+      })
+      .catch(function () {
+        if (currentRequest !== requestId) return;
+        loading = true;
+        syncSelectionState();
+        box.classList.remove('none');
+        box.textContent = 'ตรวจสอบหุ่น CPR ไม่สำเร็จ กรุณาลองอีกครั้ง';
       });
   }
   df.addEventListener('change', update); dt.addEventListener('change', update); update();

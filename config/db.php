@@ -42,20 +42,66 @@ function status_badge($row) {
     return '<span class="badge rounded-pill bg-' . $c . '"><i class="bi ' . $i . '"></i> ' . $t . '</span>';
 }
 
-/* ---------- จำนวนหุ่น ---------- */
+/* ---------- ทะเบียนหุ่น CPR ---------- */
 function cpr_total($pdo) {
-    $v = $pdo->query("SELECT svalue FROM cpr_settings WHERE skey='total_cpr'")->fetchColumn();
-    return $v === false ? 5 : (int)$v;
+    return (int)$pdo->query("SELECT COUNT(*) FROM cpr_manikins WHERE is_active = 1")->fetchColumn();
 }
-// จำนวนหุ่นที่ถูกจองในช่วงวันที่ (นับเฉพาะใบที่อนุมัติแล้ว/ยังไม่คืน; ถ้าเลยกำหนดแต่ยังไม่คืนถือว่ายังอยู่ข้างนอก)
-function cpr_used($pdo, $from, $to, $excludeId = 0) {
-    $st = $pdo->prepare("SELECT COALESCE(SUM(cpr_qty),0) FROM cpr_loans
-        WHERE status IN (1,4) AND id <> ? AND date_from <= ? AND GREATEST(date_to, ?) >= ?");
+
+function cpr_legacy_reserved($pdo, $from, $to, $excludeId = 0) {
+    $st = $pdo->prepare("SELECT l.cpr_qty, COUNT(lm.manikin_id) AS assigned_qty
+        FROM cpr_loans l
+        LEFT JOIN cpr_loan_manikins lm ON lm.loan_id = l.id
+        WHERE l.id <> ? AND l.status IN (0,1,4)
+          AND l.date_from <= ? AND GREATEST(l.date_to, ?) >= ?
+        GROUP BY l.id, l.cpr_qty");
     $st->execute([$excludeId, $to, date('Y-m-d'), $from]);
-    return (int)$st->fetchColumn();
+    $reserved = 0;
+    foreach ($st->fetchAll() as $loan) {
+        $reserved += max(0, (int)$loan['cpr_qty'] - (int)$loan['assigned_qty']);
+    }
+    return $reserved;
 }
+
+function cpr_has_legacy_active_loans($pdo) {
+    return (int)$pdo->query("SELECT COUNT(*) FROM (
+        SELECT l.id
+        FROM cpr_loans l
+        LEFT JOIN cpr_loan_manikins lm ON lm.loan_id = l.id
+        WHERE l.status IN (0,1,4)
+        GROUP BY l.id, l.cpr_qty
+        HAVING l.cpr_qty > COUNT(lm.manikin_id)
+    ) legacy_loans")->fetchColumn() > 0;
+}
+
+function cpr_available_manikins($pdo, $from, $to, $excludeId = 0) {
+    $st = $pdo->prepare("SELECT m.id, m.name FROM cpr_manikins m
+        WHERE m.is_active = 1
+          AND NOT EXISTS (
+              SELECT 1 FROM cpr_loan_manikins lm
+              JOIN cpr_loans l ON l.id = lm.loan_id
+              WHERE lm.manikin_id = m.id AND l.id <> ? AND l.status IN (0,1,4)
+                AND l.date_from <= ? AND GREATEST(l.date_to, ?) >= ?
+          )
+        ORDER BY m.name, m.id");
+    $st->execute([$excludeId, $to, date('Y-m-d'), $from]);
+    $available = $st->fetchAll();
+
+    $reserved = cpr_legacy_reserved($pdo, $from, $to, $excludeId);
+    return array_slice($available, min($reserved, count($available)));
+}
+
 function cpr_available($pdo, $from, $to, $excludeId = 0) {
-    return max(0, cpr_total($pdo) - cpr_used($pdo, $from, $to, $excludeId));
+    return count(cpr_available_manikins($pdo, $from, $to, $excludeId));
+}
+
+function cpr_used($pdo, $from, $to, $excludeId = 0) {
+    return max(0, cpr_total($pdo) - cpr_available($pdo, $from, $to, $excludeId));
+}
+
+function cpr_loan_manikin_names($pdo, $loanId) {
+    $st = $pdo->prepare("SELECT manikin_name FROM cpr_loan_manikins WHERE loan_id = ? ORDER BY manikin_name");
+    $st->execute([$loanId]);
+    return array_column($st->fetchAll(), 'manikin_name');
 }
 
 function new_ref($pdo) {
@@ -70,8 +116,12 @@ function new_ref($pdo) {
 }
 
 /* ---------- รายการตรวจสอบตอนคืน (ใช้ทั้งฝั่งผู้ยืมและเจ้าหน้าที่) ---------- */
-function default_return_rows($loan, $items) {
-    $rows = [['name' => 'หุ่น CPR', 'qty' => $loan['cpr_qty'], 'cond' => 1, 'detail' => '']];
+function default_return_rows($loan, $items, $manikins = []) {
+    $rows = [];
+    foreach ($manikins as $name) {
+        $rows[] = ['name' => 'หุ่น CPR - ' . $name, 'qty' => 1, 'cond' => 1, 'detail' => ''];
+    }
+    if (!$rows) $rows[] = ['name' => 'หุ่น CPR (ไม่ระบุชื่อ)', 'qty' => $loan['cpr_qty'], 'cond' => 1, 'detail' => ''];
     foreach ($items as $x) $rows[] = ['name' => $x['item_name'], 'qty' => $x['qty'], 'cond' => 1, 'detail' => ''];
     return $rows;
 }

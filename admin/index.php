@@ -4,9 +4,11 @@ require __DIR__ . '/../config/bootstrap.php';
 $ASSET = '../';
 
 $allowed    = ['dashboard','loans','loan_view','loan_action','return_form','return_save','loan_print',
-               'users','user_form','user_save','user_delete','settings','settings_save','login','logout'];
-$admin_only = ['users','user_form','user_save','user_delete','settings','settings_save'];
-$no_layout  = ['login','logout','loan_action','return_save','loan_print','user_save','user_delete','settings_save'];
+               'users','user_form','user_save','user_delete','manikins','manikin_save','manikin_delete',
+               'settings','settings_save','login','logout'];
+$admin_only = ['users','user_form','user_save','user_delete','manikins','manikin_save','manikin_delete','settings','settings_save'];
+$no_layout  = ['login','logout','loan_action','return_save','loan_print','user_save','user_delete',
+               'manikin_save','manikin_delete','settings_save'];
 
 $page = $_GET['page'] ?? 'dashboard';
 if (!in_array($page, $allowed, true)) $page = 'dashboard';

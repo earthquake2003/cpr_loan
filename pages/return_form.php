@@ -8,7 +8,7 @@ if (!$loan || (int)$loan['status'] !== 1) {
     return;
 }
 $it = $pdo->prepare("SELECT * FROM cpr_loan_items WHERE loan_id = ?"); $it->execute([$loan['id']]);
-$rows = default_return_rows($loan, $it->fetchAll());
+$rows = default_return_rows($loan, $it->fetchAll(), cpr_loan_manikin_names($pdo, $loan['id']));
 ?>
 <div class="container page-narrow py-4">
   <h3 class="mb-1">แจ้งส่งคืนอุปกรณ์</h3>

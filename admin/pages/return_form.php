@@ -8,6 +8,10 @@ if (!$l || (int)$l['status'] !== 4) {
 }
 $r = $pdo->prepare("SELECT * FROM cpr_return_items WHERE loan_id = ?"); $r->execute([$id]);
 $rows = array_map(fn($x) => ['name' => $x['item_name'], 'qty' => $x['qty'], 'cond' => (int)$x['item_cond'], 'detail' => $x['detail']], $r->fetchAll());
+if (!$rows) {
+    $items = $pdo->prepare("SELECT * FROM cpr_loan_items WHERE loan_id = ?"); $items->execute([$id]);
+    $rows = default_return_rows($l, $items->fetchAll(), cpr_loan_manikin_names($pdo, $id));
+}
 ?>
 <a href="index.php?page=loan_view&id=<?= $id ?>" class="small text-muted"><i class="bi bi-arrow-left"></i> กลับ</a>
 <h3 class="mb-1">ส่วนที่ 2: รับคืนอุปกรณ์</h3>
