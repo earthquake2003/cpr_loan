@@ -1,5 +1,6 @@
 <?php
 if (is_logged_in()) { header('Location: index.php'); exit; }
+$styleVersion = filemtime(__DIR__ . '/../../assets/style.css');
 $error = '';
 $locked = ($_SESSION['lock_until'] ?? 0) > time();
 
@@ -30,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$locked) {
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link href="../assets/style.css" rel="stylesheet">
+<link href="../assets/style.css?v=<?= $styleVersion ?>" rel="stylesheet">
 </head>
 <body style="background:linear-gradient(135deg,#9f1239,#e11d48 60%,#fb7185);min-height:100vh">
 <div class="container" style="max-width:420px;padding-top:11vh">

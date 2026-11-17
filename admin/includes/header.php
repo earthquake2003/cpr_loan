@@ -1,6 +1,7 @@
 <?php
 $nPending = (int)$pdo->query("SELECT COUNT(*) FROM cpr_loans WHERE status=0")->fetchColumn();
 $nReturn  = (int)$pdo->query("SELECT COUNT(*) FROM cpr_loans WHERE status=4")->fetchColumn();
+$styleVersion = filemtime(__DIR__ . '/../../assets/style.css');
 function nav_cls($page, $names) { return in_array($page, (array)$names, true) ? 'active' : ''; }
 ?>
 <!DOCTYPE html>
@@ -12,10 +13,10 @@ function nav_cls($page, $names) { return in_array($page, (array)$names, true) ? 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link href="<?= $ASSET ?>assets/style.css" rel="stylesheet">
+<link href="<?= $ASSET ?>assets/style.css?v=<?= $styleVersion ?>" rel="stylesheet">
 </head>
 <body class="d-flex flex-column min-vh-100">
-<nav class="navbar navbar-expand-lg navbar-dark admin-nav">
+<nav class="navbar navbar-expand-xxl navbar-dark admin-nav">
   <div class="container">
     <a class="navbar-brand" href="index.php"><i class="bi bi-heart-pulse-fill text-danger"></i> CPR Loan <span class="badge bg-danger align-middle ms-1" style="font-size:.6rem">เจ้าหน้าที่</span></a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>

@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/config/bootstrap.php';
+$styleVersion = filemtime(__DIR__ . '/assets/style.css');
 
 $adminExists = (int)$pdo->query("SELECT COUNT(*) FROM cpr_users WHERE role = 'admin'")->fetchColumn() > 0;
 $error = '';
@@ -65,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>สร้างผู้ดูแลระบบ · ระบบยืม-คืนหุ่น CPR</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link href="assets/style.css" rel="stylesheet">
+<link href="assets/style.css?v=<?= $styleVersion ?>" rel="stylesheet">
 </head>
 <body style="background:linear-gradient(135deg,#9f1239,#e11d48 60%,#fb7185);min-height:100vh">
 <div class="container" style="max-width:520px;padding-top:8vh">

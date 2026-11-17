@@ -10,7 +10,7 @@ $ret = $pdo->prepare("SELECT * FROM cpr_return_items WHERE loan_id = ?"); $ret->
 function f($v, $min = 120) { return '<span class="fill" style="min-width:' . $min . 'px">' . ($v === null || $v === '' ? '&nbsp;' : h($v)) . '</span>'; }
 ?>
 <!DOCTYPE html>
-<html lang="th"><head><meta charset="UTF-8"><title>ใบยืม-คืน #<?= $id ?></title>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ใบยืม-คืน #<?= $id ?></title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
 <style>
   body { font-family:'Sarabun','TH Sarabun New',sans-serif; font-size:16px; line-height:2; margin:0; background:#eee; }
@@ -22,6 +22,13 @@ function f($v, $min = 120) { return '<span class="fill" style="min-width:' . $mi
   .sign > div { width:48%; }
   hr { border:0; border-top:1px solid #333; margin:14px 0; }
   .bar { text-align:center; padding:10px; } .bar button { font-size:16px; padding:6px 22px; cursor:pointer; }
+  @media screen and (max-width:760px) {
+    .page { width:auto; min-height:0; margin:.5rem; padding:1rem; }
+    .fill { min-width:0 !important; max-width:100%; overflow-wrap:anywhere; }
+    .page > div { overflow-wrap:anywhere; }
+    .sign { flex-wrap:wrap; gap:1rem; }
+    .sign > div { width:100%; }
+  }
   @media print { body { background:#fff; } .page { margin:0; box-shadow:none; } .bar { display:none; } }
 </style></head>
 <body>

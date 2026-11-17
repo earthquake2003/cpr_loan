@@ -49,7 +49,7 @@ $avail = cpr_available($pdo, $today, $today);
       <div class="col-md-5"><h5 class="mb-1"><i class="bi bi-search text-brand"></i> มีรหัสติดตามแล้ว?</h5>
         <div class="text-muted small">กรอกรหัส 6 ตัวเพื่อดูสถานะหรือแจ้งคืนอุปกรณ์</div></div>
       <div class="col-md-7">
-        <form method="get" action="index.php" class="d-flex gap-2">
+        <form method="get" action="index.php" class="d-flex gap-2 track-search">
           <input type="hidden" name="page" value="track">
           <input name="ref" class="form-control form-control-lg text-uppercase" maxlength="6" placeholder="เช่น K7M2QX" required>
           <button class="btn btn-brand btn-lg px-4">ตรวจสอบ</button>

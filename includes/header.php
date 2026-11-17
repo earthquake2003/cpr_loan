@@ -1,3 +1,4 @@
+<?php $styleVersion = filemtime(__DIR__ . '/../assets/style.css'); ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -7,7 +8,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link href="<?= $ASSET ?>assets/style.css" rel="stylesheet">
+<link href="<?= $ASSET ?>assets/style.css?v=<?= $styleVersion ?>" rel="stylesheet">
 </head>
 <body class="d-flex flex-column min-vh-100">
 <nav class="navbar navbar-expand-md navbar-dark" style="background:#9f1239">

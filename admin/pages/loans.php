@@ -22,14 +22,6 @@ $offset = ($pg - 1) * $per;
 $st = $pdo->prepare("SELECT * FROM cpr_loans $w ORDER BY FIELD(status,0,4,1,2,3), id DESC LIMIT $per OFFSET $offset");
 $st->execute($params);
 $rows = $st->fetchAll();
-$manikinsByLoan = [];
-if ($rows) {
-    $loanIds = array_column($rows, 'id');
-    $marks = implode(',', array_fill(0, count($loanIds), '?'));
-    $ms = $pdo->prepare("SELECT loan_id, manikin_name FROM cpr_loan_manikins WHERE loan_id IN ($marks) ORDER BY manikin_name");
-    $ms->execute($loanIds);
-    foreach ($ms->fetchAll() as $manikin) $manikinsByLoan[$manikin['loan_id']][] = $manikin['manikin_name'];
-}
 
 $cnt = [];
 foreach ($pdo->query("SELECT status, COUNT(*) c FROM cpr_loans GROUP BY status") as $r) $cnt[(int)$r['status']] = (int)$r['c'];
@@ -41,9 +33,9 @@ function lurl($s, $q, $p = 1) { return 'index.php?page=loans&s=' . urlencode($s)
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <h3 class="mb-0">รายการยืม-คืน</h3>
-  <form method="get" class="d-flex gap-2">
+  <form method="get" class="d-flex gap-2 loan-search">
     <input type="hidden" name="page" value="loans"><input type="hidden" name="s" value="<?= h($s) ?>">
-    <input class="form-control" name="q" placeholder="ค้นหาชื่อ / หน่วยงาน / รหัส / เบอร์" value="<?= h($q) ?>" style="min-width:260px">
+    <input class="form-control" name="q" placeholder="ค้นหาชื่อ / หน่วยงาน / รหัส / เบอร์" value="<?= h($q) ?>">
     <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
   </form>
 </div>
@@ -60,9 +52,9 @@ function lurl($s, $q, $p = 1) { return 'index.php?page=loans&s=' . urlencode($s)
   <?php foreach ($rows as $r): ?>
     <tr>
       <td><code class="text-brand"><?= h($r['ref_code']) ?></code><div class="small text-muted">#<?= $r['id'] ?></div></td>
-      <td><b><?= h($r['borrower_name']) ?></b><div class="small text-muted"><?= h($r['department']) ?> · <?= h($r['borrower_phone']) ?></div></td>
+      <td><div class="fw-bold"><?= h($r['department']) ?></div><div><?= h($r['borrower_name']) ?></div><div class="small text-muted"><?= h($r['borrower_phone']) ?></div></td>
       <td class="small"><?= thdate($r['date_from']) ?> – <?= thdate($r['date_to']) ?><div class="text-muted"><?= (int)$r['total_days'] ?> วัน</div></td>
-      <td><?php if (!empty($manikinsByLoan[$r['id']])): ?><?= implode('<br>', array_map('h', $manikinsByLoan[$r['id']])) ?><?php else: ?><?= (int)$r['cpr_qty'] ?> ตัว<?php endif; ?></td>
+      <td><?= (int)$r['cpr_qty'] ?> ตัว</td>
       <td><?= status_badge($r) ?></td>
       <td class="text-end text-nowrap">
         <a class="btn btn-sm btn-outline-secondary" href="index.php?page=loan_view&id=<?= $r['id'] ?>">ดู</a>
@@ -76,7 +68,7 @@ function lurl($s, $q, $p = 1) { return 'index.php?page=loans&s=' . urlencode($s)
 </table></div></div>
 
 <?php if ($pages > 1): ?>
-<nav class="mt-3"><ul class="pagination justify-content-center">
+<nav class="mt-3"><ul class="pagination justify-content-center flex-wrap">
   <?php for ($i = 1; $i <= $pages; $i++): ?>
   <li class="page-item <?= $i === $pg ? 'active' : '' ?>"><a class="page-link" href="<?= lurl($s, $q, $i) ?>"><?= $i ?></a></li>
   <?php endfor; ?>

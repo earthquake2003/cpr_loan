@@ -6,6 +6,10 @@ $l = $st->fetch();
 if (!$l) { echo '<div class="alert alert-danger">ไม่พบรายการ</div>'; return; }
 $items = $pdo->prepare("SELECT * FROM cpr_loan_items WHERE loan_id = ?"); $items->execute([$id]); $items = $items->fetchAll();
 $manikins = cpr_loan_manikin_names($pdo, $id);
+$phoneDigits = preg_replace('/\D+/', '', $l['borrower_phone']);
+$displayPhone = strlen($phoneDigits) === 10 && $phoneDigits[0] === '0'
+    ? substr($phoneDigits, 0, 3) . '-' . substr($phoneDigits, 3, 3) . '-' . substr($phoneDigits, 6)
+    : $l['borrower_phone'];
 $ret = $pdo->prepare("SELECT * FROM cpr_return_items WHERE loan_id = ?"); $ret->execute([$id]); $ret = $ret->fetchAll();
 $s = (int)$l['status'];
 $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
@@ -15,7 +19,7 @@ $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
     <a href="index.php?page=loans" class="small text-muted"><i class="bi bi-arrow-left"></i> กลับรายการ</a>
     <h3 class="mb-0 mt-2">ใบยืม #<?= $l['id'] ?> <code class="fs-6 text-brand"><?= h($l['ref_code']) ?></code></h3>
   </div>
-  <div class="d-flex gap-2 align-items-center">
+  <div class="d-flex gap-2 align-items-center loan-view-actions">
     <?= status_badge($l) ?>
     <a class="btn btn-outline-secondary btn-sm" target="_blank" href="index.php?page=loan_print&id=<?= $id ?>"><i class="bi bi-printer"></i> พิมพ์ใบยืม-คืน</a>
   </div>
@@ -25,16 +29,24 @@ $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
   <div class="col-lg-7">
     <div class="card mb-3"><div class="card-body p-4">
       <h6 class="mb-3">ส่วนที่ 1: รายการขอยืม</h6>
+      <div class="d-inline-block mw-100 bg-light border-start border-4 border-danger rounded-3 px-3 py-2 mb-3">
+        <div class="small text-muted">หน่วยงาน</div>
+        <div class="fw-semibold fs-5 text-break"><?= h($l['department']) ?></div>
+      </div>
       <dl class="row mb-0">
-        <dt class="col-sm-4 text-muted fw-normal">วันที่ส่งคำขอ</dt><dd class="col-sm-8"><?= thdate($l['loan_date']) ?></dd>
-        <dt class="col-sm-4 text-muted fw-normal">ผู้ยืม</dt><dd class="col-sm-8"><?= h($l['borrower_name']) ?> · <a href="tel:<?= h($l['borrower_phone']) ?>"><?= h($l['borrower_phone']) ?></a></dd>
-        <dt class="col-sm-4 text-muted fw-normal">หน่วยงาน</dt><dd class="col-sm-8"><?= h($l['department']) ?></dd>
+        <dt class="col-sm-4 text-muted fw-normal">วันที่ยืม</dt><dd class="col-sm-8"><?= thdate($l['loan_date']) ?></dd>
+        <dt class="col-sm-4 text-muted fw-normal">ผู้ยืม</dt><dd class="col-sm-8"><?= h($l['borrower_name']) ?> · <a class="text-reset text-decoration-none" href="tel:<?= h($l['borrower_phone']) ?>"><?= h($displayPhone) ?></a></dd>
         <dt class="col-sm-4 text-muted fw-normal">ภารกิจ/โครงการ</dt><dd class="col-sm-8"><?= h($l['purpose']) ?></dd>
         <dt class="col-sm-4 text-muted fw-normal">ระยะเวลา</dt><dd class="col-sm-8"><?= thdate($l['date_from']) ?> – <?= thdate($l['date_to']) ?> (<?= (int)$l['total_days'] ?> วัน)</dd>
         <dt class="col-sm-4 text-muted fw-normal">หุ่น CPR</dt>
-        <dd class="col-sm-8"><?php if ($manikins): ?><?= implode('<br>', array_map('h', $manikins)) ?><?php else: ?><?= (int)$l['cpr_qty'] ?> ตัว (รายการเดิมไม่ระบุชื่อ)<?php endif; ?></dd>
+        <dd class="col-sm-8">
+          <div class=""><?= (int)$l['cpr_qty'] ?> ตัว</div>
+          <div class="small text-muted mt-1"><?php if ($manikins): ?>รายชื่อ: <?= implode(', ', array_map('h', $manikins)) ?><?php else: ?>รายการเดิมไม่ระบุชื่อหุ่น<?php endif; ?></div>
+        </dd>
+        <?php if ($items): ?>
         <dt class="col-sm-4 text-muted fw-normal">อุปกรณ์เพิ่มเติม</dt>
-        <dd class="col-sm-8"><?php foreach ($items as $x) echo h($x['item_name']) . ' × ' . (int)$x['qty'] . '<br>'; if (!$items) echo '-'; ?></dd>
+        <dd class="col-sm-8"><?php foreach ($items as $x) echo h($x['item_name']) . ' × ' . (int)$x['qty'] . '<br>'; ?></dd>
+        <?php endif; ?>
         <dt class="col-sm-4 text-muted fw-normal">กำหนดส่งคืน</dt><dd class="col-sm-8"><?= thdate($l['due_date']) ?></dd>
         <dt class="col-sm-4 text-muted fw-normal">ผู้ให้ยืม</dt><dd class="col-sm-8"><?= h($l['lender_name'] ?: '-') ?></dd>
         <?php if ($s === 3): ?><dt class="col-sm-4 text-muted fw-normal">เหตุผลที่ไม่อนุมัติ</dt><dd class="col-sm-8"><?= h($l['reject_reason']) ?></dd><?php endif; ?>
@@ -46,13 +58,13 @@ $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
       <h6 class="mb-3">ส่วนที่ 2: รายการส่งคืน <?= $s === 4 ? '<span class="badge bg-info text-dark">ผู้ยืมแจ้งเอง — รอตรวจสอบ</span>' : '' ?></h6>
       <p class="small mb-2">วันที่คืน: <b><?= thdate($l['return_date']) ?></b> · ผู้ส่งคืน: <b><?= h($l['returner_name']) ?></b>
         <?php if ($s === 2): ?> · ผู้รับคืน: <b><?= h($l['receiver_name']) ?></b><?php endif; ?></p>
-      <table class="table table-sm align-middle mb-0">
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
         <thead><tr><th>รายการ</th><th>จำนวน</th><th>สภาพ</th><th>รายละเอียด</th></tr></thead>
         <tbody><?php foreach ($ret as $x): ?>
           <tr class="<?= $x['item_cond'] == 1 ? '' : 'table-danger' ?>"><td><?= h($x['item_name']) ?></td><td><?= (int)$x['qty'] ?></td>
               <td><?= h(COND[$x['item_cond']] ?? '-') ?></td><td><?= h($x['detail']) ?></td></tr>
         <?php endforeach; ?></tbody>
-      </table>
+      </table></div>
     </div></div>
     <?php endif; ?>
   </div>
