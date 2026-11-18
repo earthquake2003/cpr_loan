@@ -9,9 +9,9 @@ if (!$oldItems) $oldItems = [''];
 ?>
 <div class="container page-narrow py-4">
   <h3 class="mb-1">ขอยืมอุปกรณ์หุ่น CPR</h3>
-  <p class="text-muted">กรอกข้อมูลให้ครบ เจ้าหน้าที่จะตรวจสอบและอนุมัติ — ไม่ต้อง login</p>
+  <p class="text-muted"></p>
   <?php if (is_logged_in()): ?>
-    <div class="alert alert-info"><i class="bi bi-person-check"></i> เจ้าหน้าที่ <b><?= h(current_user()) ?></b> กำลังบันทึกแทนผู้ยืม — ใบนี้จะ<b>อนุมัติทันที</b></div>
+    <!--<div class="alert alert-info"><i class="bi bi-person-check"></i> เจ้าหน้าที่ <b><?= h(current_user()) ?></b> กำลังบันทึกแทนผู้ยืม — ใบนี้จะ<b>อนุมัติทันที</b></div>-->
   <?php endif; ?>
 
   <form method="post" action="index.php?page=loan_save" id="loanForm" novalidate class="needs-validation">

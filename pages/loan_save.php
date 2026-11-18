@@ -82,4 +82,4 @@ try {
 
 if (!$admin) $_SESSION['submits'][] = time();
 $_SESSION['last_ref'] = $ref;
-header($admin ? "Location: admin/index.php?page=loan_view&id=$loanId" : 'Location: index.php?page=loan_done');
+header($admin ? "Location: index.php?page=loan_view&id=$loanId" : 'Location: index.php?page=loan_done');

@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 if ($error === '') {
-                    header('Location: admin/index.php?page=login');
+                    header('Location: index.php?page=login');
                     exit;
                 }
             }
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <p class="text-muted mb-4">แบบฟอร์มนี้ใช้สร้างแอดมินเริ่มต้น และจะปิดใช้งานหลังมีแอดมินแล้ว</p>
     <?php if ($adminExists): ?>
       <div class="alert alert-info">มีบัญชีผู้ดูแลระบบแล้ว ไม่สามารถสร้างจากแบบฟอร์มนี้ได้</div>
-      <a class="btn btn-brand w-100" href="admin/index.php?page=login">เข้าสู่ระบบเจ้าหน้าที่</a>
+      <a class="btn btn-brand w-100" href="index.php?page=login">เข้าสู่ระบบแอดมิน</a>
     <?php else: ?>
       <?php if ($error): ?><div class="alert alert-danger"><?= h($error) ?></div><?php endif; ?>
       <form method="post" action="create_admin.php">

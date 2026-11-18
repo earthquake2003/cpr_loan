@@ -71,7 +71,7 @@ $cards = [
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div><h3 class="mb-0">แดชบอร์ด</h3><div class="text-muted small">ภาพรวมวันที่ <?= thdate($today) ?></div></div>
-  <a class="btn btn-brand" href="../index.php?page=loan_form"><i class="bi bi-plus-lg"></i> บันทึกการยืมแทนผู้ยืม</a>
+  <a class="btn btn-brand" href="index.php?page=loan_form"><i class="bi bi-plus-lg"></i> บันทึกการยืมแทนผู้ยืม</a>
 </div>
 
 <div class="row g-3 mb-4">

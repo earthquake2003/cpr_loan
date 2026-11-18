@@ -13,7 +13,7 @@ function csrf_check() {
 function is_logged_in() { return !empty($_SESSION['user']); }
 function is_admin()     { return ($_SESSION['user']['role'] ?? '') === 'admin'; }
 function current_user() { return $_SESSION['user']['full_name'] ?? ''; }
-function require_login() {            // ใช้ในส่วนเจ้าหน้าที่ (admin/index.php)
+function require_login() {
     if (!is_logged_in()) { header('Location: index.php?page=login'); exit; }
 }
 function require_admin() {
