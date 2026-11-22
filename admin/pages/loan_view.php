@@ -12,6 +12,7 @@ $displayPhone = strlen($phoneDigits) === 10 && $phoneDigits[0] === '0'
     : $l['borrower_phone'];
 $ret = $pdo->prepare("SELECT * FROM cpr_return_items WHERE loan_id = ?"); $ret->execute([$id]); $ret = $ret->fetchAll();
 $s = (int)$l['status'];
+$isOverdue = $s === 1 && !empty($l['due_date']) && $l['due_date'] < date('Y-m-d');
 $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -98,7 +99,11 @@ $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
       <a class="btn btn-success w-100" href="index.php?page=return_form&id=<?= $id ?>"><i class="bi bi-clipboard2-check"></i> ตรวจสอบและยืนยันรับคืน</a>
     </div></div>
     <?php elseif ($s === 1): ?>
+    <?php if ($isOverdue): ?>
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> เกินกำหนดคืน — กำหนดส่งคืน <?= thdate($l['due_date']) ?> </div>
+    <?php else: ?>
     <div class="alert alert-primary"><i class="bi bi-box-arrow-up-right"></i> กำลังยืมอยู่ — รอผู้ยืมแจ้งคืนก่อนจึงจะรับคืนได้</div>
+    <?php endif; ?>
     <?php elseif ($s === 2): ?>
     <div class="alert alert-success"><i class="bi bi-check-circle"></i> คืนเรียบร้อยเมื่อ <?= thdate($l['return_date']) ?></div>
     <?php endif; ?>

@@ -27,9 +27,8 @@ function nav_cls($page, $names) { return in_array($page, (array)$names, true) ? 
           <i class="bi bi-card-checklist"></i> รายการยืม-คืน
           <?php if ($nPending): ?><span class="badge bg-warning text-dark"><?= $nPending ?></span><?php endif; ?>
           <?php if ($nReturn): ?><span class="badge bg-info text-dark"><?= $nReturn ?></span><?php endif; ?></a></li>
-        <li class="nav-item"><a class="nav-link" href="index.php?page=loan_form"><i class="bi bi-plus-circle"></i> บันทึกการยืมแทนผู้ยืม</a></li>
+        <li class="nav-item"><a class="nav-link" href="index.php?page=loan_form"><i class="bi bi-plus-circle"></i> บันทึกการยืม</a></li>
         <li class="nav-item"><a class="nav-link <?= nav_cls($page, 'manikins') ?>" href="index.php?page=manikins"><i class="bi bi-person-standing"></i> จัดการหุ่น CPR</a></li>
-        <li class="nav-item"><a class="nav-link <?= nav_cls($page, 'settings') ?>" href="index.php?page=settings"><i class="bi bi-gear"></i> ตั้งค่า</a></li>
       </ul>
       <div class="d-flex align-items-center gap-2 text-light small">
         <span><i class="bi bi-person-circle"></i> <?= h(current_user()) ?></span>
