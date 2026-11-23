@@ -2,11 +2,12 @@
 $today = date('Y-m-d');
 $todayDate = new DateTimeImmutable($today);
 $monthStart = $todayDate->modify('first day of this month');
-$cnt = [0 => 0, 1 => 0, 2 => 0, 3 => 0, 4 => 0];
-foreach ($pdo->query("SELECT status, COUNT(*) c FROM cpr_loans GROUP BY status") as $r) $cnt[(int)$r['status']] = (int)$r['c'];
-$od = $pdo->prepare("SELECT COUNT(*) FROM cpr_loans WHERE status=1 AND due_date < ?");
-$od->execute([$today]);
-$overdue = (int)$od->fetchColumn();
+$borrowedQtySt = $pdo->prepare("SELECT COALESCE(SUM(cpr_qty), 0) FROM cpr_loans WHERE status=1");
+$borrowedQtySt->execute();
+$borrowedQty = (int)$borrowedQtySt->fetchColumn();
+$overdueQtySt = $pdo->prepare("SELECT COALESCE(SUM(cpr_qty), 0) FROM cpr_loans WHERE status=1 AND due_date < ?");
+$overdueQtySt->execute([$today]);
+$overdueQty = (int)$overdueQtySt->fetchColumn();
 $total = cpr_total($pdo);
 $avail = cpr_available($pdo, $today, $today);
 $registered = (int)$pdo->query("SELECT COUNT(*) FROM cpr_manikins")->fetchColumn();
@@ -63,10 +64,8 @@ $stockTotal = max(1, $registered);
 $availPct = $avail / $stockTotal * 100;
 $busyPct = $busy / $stockTotal * 100;
 $cards = [
-  ['รอตรวจสอบ',        $cnt[0],   'bi-hourglass-split',   '#fef3c7', '#b45309', 'loans&s=0'],
-  ['กำลังยืม',          $cnt[1],   'bi-box-arrow-up-right','#dbeafe', '#1d4ed8', 'loans&s=1'],
-  ['รอยืนยันรับคืน',    $cnt[4],   'bi-box-arrow-in-down', '#cffafe', '#0e7490', 'loans&s=4'],
-  ['เกินกำหนดคืน',      $overdue,  'bi-exclamation-triangle','#fee2e2','#b91c1c', 'loans&s=overdue'],
+  ['กำลังยืม',          $borrowedQty, 'bi-box-arrow-up-right','#dbeafe', '#1d4ed8', 'loans&s=1'],
+  ['เกินกำหนดคืน',      $overdueQty,  'bi-exclamation-triangle','#fee2e2','#b91c1c', 'loans&s=overdue'],
 ];
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -76,7 +75,7 @@ $cards = [
 
 <div class="row g-3 mb-4">
   <?php foreach ($cards as [$t, $n, $ic, $bg, $fg, $link]): ?>
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-6">
     <a href="index.php?page=<?= $link ?>" class="text-decoration-none text-reset">
       <div class="card stat-card h-100"><div class="card-body d-flex justify-content-between align-items-center">
         <div><div class="text-muted small mb-1"><?= $t ?></div><div class="stat-num" style="color:<?= $fg ?>"><?= $n ?></div></div>
@@ -131,11 +130,11 @@ $cards = [
               </td>
               <td class="text-end text-nowrap">
                 <a class="btn btn-sm btn-outline-success" href="tel:<?= h($r['borrower_phone']) ?>" aria-label="โทรหา<?= h($r['borrower_name']) ?>"><i class="bi bi-telephone"></i> โทร</a>
-                <?php if ((int)$r['status'] === 4): ?>
+                <!-- <?php if ((int)$r['status'] === 4): ?>
                 <a class="btn btn-sm btn-success" href="index.php?page=return_form&id=<?= (int)$r['id'] ?>"><i class="bi bi-box-arrow-in-down"></i> รับคืน</a>
                 <?php else: ?>
                 <a class="btn btn-sm btn-outline-secondary" href="index.php?page=loan_view&id=<?= (int)$r['id'] ?>">ดู</a>
-                <?php endif; ?>
+                <?php endif; ?> -->
               </td></tr>
         <?php endforeach; ?></tbody></table></div>
       <?php endif; ?>
@@ -162,7 +161,7 @@ $cards = [
     <div class="card"><div class="card-body">
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0"><i class="bi bi-calendar-range text-brand"></i> ไทม์ไลน์หุ่น CPR รายตัว (6 เดือน)</h6>
-        <div class="small text-muted">แสดงรายการรอตรวจสอบ / กำลังยืม / รอยืนยันคืน</div>
+        <!-- <div class="small text-muted">แสดงรายการกำลังยืมของหุ่น</div> -->
       </div>
       <?php if (!$manikins): ?>
       <div class="text-muted small py-3">ไม่มีหุ่นที่เปิดใช้งานในทะเบียน</div>
@@ -199,9 +198,9 @@ $cards = [
         <?php endforeach; ?>
       </div>
       <div class="d-flex gap-3 flex-wrap small text-muted mt-3">
-        <span><i class="timeline-legend timeline-pending"></i> รอตรวจสอบ</span>
+        <!-- <span><i class="timeline-legend timeline-pending"></i> รอตรวจสอบ</span> -->
         <span><i class="timeline-legend timeline-loaned"></i> กำลังยืม</span>
-        <span><i class="timeline-legend timeline-returning"></i> รอยืนยันคืน</span>
+        <!-- <span><i class="timeline-legend timeline-returning"></i> รอยืนยันคืน</span> -->
       </div>
       <?php if ($legacyQty): ?><div class="small text-muted mt-2">มีหุ่น <?= $legacyQty ?> ตัวในใบยืมเดิมที่ยังไม่ระบุชื่อ จึงไม่สามารถระบุตำแหน่งในไทม์ไลน์รายตัวได้</div><?php endif; ?>
       <?php endif; ?>
