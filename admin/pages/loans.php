@@ -26,9 +26,9 @@ $rows = $st->fetchAll();
 $cnt = [];
 foreach ($pdo->query("SELECT status, COUNT(*) c FROM cpr_loans GROUP BY status") as $r) $cnt[(int)$r['status']] = (int)$r['c'];
 $od = $pdo->prepare("SELECT COUNT(*) FROM cpr_loans WHERE status=1 AND due_date < ?"); $od->execute([$today]);
-$tabs = ['all' => ['ทั้งหมด', array_sum($cnt)], '0' => ['รอตรวจสอบ', $cnt[0] ?? 0], '1' => ['กำลังยืม', $cnt[1] ?? 0],
-         '4' => ['รอยืนยันคืน', $cnt[4] ?? 0], 'overdue' => ['เกินกำหนด', (int)$od->fetchColumn()],
-         '2' => ['คืนแล้ว', $cnt[2] ?? 0], '3' => ['ไม่อนุมัติ', $cnt[3] ?? 0]];
+$tabs = ['all' => ['ทั้งหมด', array_sum($cnt)], '1' => ['กำลังยืม', $cnt[1] ?? 0],
+         'overdue' => ['เกินกำหนด', (int)$od->fetchColumn()],
+         '2' => ['คืนแล้ว', $cnt[2] ?? 0]];
 function lurl($s, $q, $p = 1) { return 'index.php?page=loans&s=' . urlencode($s) . '&q=' . urlencode($q) . '&p=' . $p; }
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
