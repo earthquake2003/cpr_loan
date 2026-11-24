@@ -3,19 +3,31 @@ $id = (int)($_GET['id'] ?? 0);
 $st = $pdo->prepare("SELECT * FROM cpr_loans WHERE id = ?");
 $st->execute([$id]);
 $l = $st->fetch();
-if (!$l || (int)$l['status'] !== 4) {
+if (!$l || !in_array((int)$l['status'], [1, 4], true)) {
     echo '<div class="alert alert-warning">ไม่พบรายการ หรือรายการนี้ไม่อยู่ในสถานะรับคืน <a href="index.php?page=loans">กลับ</a></div>'; return;
 }
-$r = $pdo->prepare("SELECT * FROM cpr_return_items WHERE loan_id = ?"); $r->execute([$id]);
-$rows = array_map(fn($x) => ['name' => $x['item_name'], 'qty' => $x['qty'], 'cond' => (int)$x['item_cond'], 'detail' => $x['detail']], $r->fetchAll());
+$rows = [];
+if ((int)$l['status'] === 4) {
+    $r = $pdo->prepare("SELECT * FROM cpr_return_items WHERE loan_id = ?"); $r->execute([$id]);
+    $rows = array_map(fn($x) => ['name' => $x['item_name'], 'qty' => $x['qty'], 'cond' => (int)$x['item_cond'], 'detail' => $x['detail']], $r->fetchAll());
+}
 if (!$rows) {
     $items = $pdo->prepare("SELECT * FROM cpr_loan_items WHERE loan_id = ?"); $items->execute([$id]);
     $rows = default_return_rows($l, $items->fetchAll(), cpr_loan_manikin_names($pdo, $id));
 }
 ?>
 <a href="index.php?page=loan_view&id=<?= $id ?>" class="small text-muted"><i class="bi bi-arrow-left"></i> กลับ</a>
-<h3 class="mb-1">ส่วนที่ 2: รับคืนอุปกรณ์</h3>
-<p class="text-muted"><?= h($l['borrower_name']) ?> · <?= h($l['department']) ?> · กำหนดคืน <?= thdate($l['due_date']) ?></p>
+<h3 class="mb-1 mt-3">รับคืนอุปกรณ์</h3>
+<div class="d-inline-block mw-100 bg-light border-start border-4 border-danger rounded-3 px-3 py-2 mb-2">
+  <div class="small text-muted">หน่วยงาน</div>
+  <div class="fw-semibold fs-5 text-break"><?= h($l['department']) ?></div>
+</div>
+<p class="text-muted"><?= h($l['borrower_name']) ?> · กำหนดคืน <?= thdate($l['due_date']) ?></p>
+<?php if ((int)$l['status'] === 4): ?>
+<p class="small text-muted">ผู้ยืมแจ้งคืนแล้ว ตรวจสภาพอุปกรณ์ก่อนยืนยันรับคืน</p>
+<?php else: ?>
+<p class="small text-muted">บันทึกการรับคืนโดยเจ้าหน้าที่ ตรวจสภาพอุปกรณ์ก่อนยืนยัน</p>
+<?php endif; ?>
 <form method="post" action="index.php?page=return_save" class="card card-body p-4" style="max-width:900px">
   <?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>">
   <div class="row g-3 mb-4">

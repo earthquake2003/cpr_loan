@@ -1,7 +1,7 @@
 <?php
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: index.php?page=loans'); exit; }
 $id = (int)($_POST['id'] ?? 0);
-$st = $pdo->prepare("SELECT * FROM cpr_loans WHERE id = ? AND status = 4");
+$st = $pdo->prepare("SELECT * FROM cpr_loans WHERE id = ? AND status IN (1,4)");
 $st->execute([$id]);
 $l = $st->fetch();
 if (!$l) { flash('error', 'ไม่พบรายการ หรือรับคืนไปแล้ว'); header('Location: index.php?page=loans'); exit; }
@@ -18,8 +18,9 @@ if ($err) { flash('error', $err); header("Location: index.php?page=return_form&i
 try {
     $pdo->beginTransaction();
     replace_return_items($pdo, $id, $items);
-    $pdo->prepare("UPDATE cpr_loans SET status=2, return_date=?, returner_name=?, receiver_name=? WHERE id=?")
-        ->execute([$date, mb_substr($name, 0, 150), current_user(), $id]);
+    $update = $pdo->prepare("UPDATE cpr_loans SET status=2, return_date=?, returner_name=?, receiver_name=? WHERE id=? AND status IN (1,4)");
+    $update->execute([$date, mb_substr($name, 0, 150), current_user(), $id]);
+    if ($update->rowCount() !== 1) throw new RuntimeException('สถานะรายการเปลี่ยนไปแล้ว');
     $pdo->commit();
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();

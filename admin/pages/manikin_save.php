@@ -2,11 +2,12 @@
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: index.php?page=manikins'); exit; }
 $id = (int)($_POST['id'] ?? 0);
 $name = trim($_POST['name'] ?? '');
+$details = trim($_POST['details'] ?? '');
 $active = $id === 0 || !empty($_POST['is_active']) ? 1 : 0;
 $back = 'index.php?page=manikins' . ($id ? "&id=$id" : '');
 
-if ($name === '' || mb_strlen($name) > 100) {
-    flash('error', 'กรุณากรอกชื่อหุ่นไม่เกิน 100 ตัวอักษร');
+if ($name === '' || mb_strlen($name) > 100 || mb_strlen($details) > 1000) {
+    flash('error', 'กรุณากรอกชื่อหุ่นไม่เกิน 100 ตัวอักษร และรายละเอียดไม่เกิน 1,000 ตัวอักษร');
     header("Location: $back");
     exit;
 }
@@ -46,10 +47,10 @@ if ($id) {
         }
     }
 
-    $pdo->prepare('UPDATE cpr_manikins SET name = ?, is_active = ? WHERE id = ?')
-        ->execute([$name, $active, $id]);
+    $pdo->prepare('UPDATE cpr_manikins SET name = ?, details = ?, is_active = ? WHERE id = ?')
+        ->execute([$name, $details !== '' ? $details : null, $active, $id]);
 } else {
-    $pdo->prepare('INSERT INTO cpr_manikins (name) VALUES (?)')->execute([$name]);
+    $pdo->prepare('INSERT INTO cpr_manikins (name, details) VALUES (?, ?)')->execute([$name, $details !== '' ? $details : null]);
 }
 
 flash('success', $id ? 'บันทึกหุ่น CPR แล้ว' : 'เพิ่มหุ่น CPR แล้ว');

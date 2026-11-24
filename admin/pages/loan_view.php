@@ -102,8 +102,9 @@ $avail = cpr_available($pdo, $l['date_from'], $l['date_to'], $id);
     <?php if ($isOverdue): ?>
     <div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> เกินกำหนดคืน — กำหนดส่งคืน <?= thdate($l['due_date']) ?> </div>
     <?php else: ?>
-    <div class="alert alert-primary"><i class="bi bi-box-arrow-up-right"></i> กำลังยืมอยู่ — รอผู้ยืมแจ้งคืนก่อนจึงจะรับคืนได้</div>
+    <div class="alert alert-primary"><i class="bi bi-box-arrow-up-right"></i> กำลังยืมอยู่ — บันทึกการรับคืนได้เมื่อได้รับอุปกรณ์แล้ว</div>
     <?php endif; ?>
+    <a class="btn btn-success w-100 mb-3" href="index.php?page=return_form&id=<?= $id ?>"><i class="bi bi-box-arrow-in-down"></i> บันทึกการรับคืน</a>
     <?php elseif ($s === 2): ?>
     <div class="alert alert-success"><i class="bi bi-check-circle"></i> คืนเรียบร้อยเมื่อ <?= thdate($l['return_date']) ?></div>
     <?php endif; ?>

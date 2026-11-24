@@ -4,8 +4,9 @@ unset($_SESSION['old']);
 function o($k, $d = '') { global $old; return h($old[$k] ?? $d); }
 $oldManikinIds = array_map('intval', (array)($old['manikin_ids'] ?? []));
 $today = date('Y-m-d');
-$oldItems = $old['item_name'] ?? [''];
-if (!$oldItems) $oldItems = [''];
+$oldItems = array_map('strval', (array)($old['item_name'] ?? []));
+$oldItemQty = (array)($old['item_qty'] ?? []);
+$additionalItems = ['AED', 'Choking'];
 ?>
 <div class="container page-narrow py-4">
   <h3 class="mb-1">ขอยืมอุปกรณ์หุ่น CPR</h3>
@@ -21,15 +22,15 @@ if (!$oldItems) $oldItems = [''];
     <div class="card mb-3"><div class="card-body p-4">
       <div class="form-section-title"><span class="step-num">1</span> ข้อมูลผู้ขอยืม</div>
       <div class="row g-3">
+        <div class="col-12"><div class="form-floating">
+          <input name="department" id="dp" class="form-control" placeholder="หน่วยงาน" value="<?= o('department') ?>" required maxlength="150">
+          <label for="dp">หน่วยงาน/สังกัด *</label></div></div>
         <div class="col-md-7"><div class="form-floating">
           <input name="borrower_name" id="bn" class="form-control" placeholder="ชื่อ" value="<?= o('borrower_name') ?>" required maxlength="150">
           <label for="bn">ชื่อ-นามสกุล ผู้ยืม *</label></div></div>
         <div class="col-md-5"><div class="form-floating">
           <input name="borrower_phone" id="bp" type="tel" class="form-control" placeholder="โทร" value="<?= o('borrower_phone') ?>" required maxlength="20" pattern="[0-9+\-\s]{9,20}">
           <label for="bp">เบอร์โทรศัพท์ *</label></div></div>
-        <div class="col-12"><div class="form-floating">
-          <input name="department" id="dp" class="form-control" placeholder="หน่วยงาน" value="<?= o('department') ?>" required maxlength="150">
-          <label for="dp">หน่วยงาน/สังกัด *</label></div></div>
         <div class="col-12"><div class="form-floating">
           <input name="purpose" id="pp" class="form-control" placeholder="ภารกิจ" value="<?= o('purpose') ?>" required maxlength="255">
           <label for="pp">นำไปใช้ในภารกิจ/โครงการ *</label></div></div>
@@ -55,20 +56,31 @@ if (!$oldItems) $oldItems = [''];
     <div class="card mb-3"><div class="card-body p-4">
       <div class="form-section-title"><span class="step-num">3</span> รายการอุปกรณ์</div>
       <label class="form-label">เลือกหุ่น CPR ที่ต้องการยืม *</label>
+      <div id="manikinCount" class="manikin-selection-count mb-2" role="status" aria-live="polite">
+        <i class="bi bi-check2-square" aria-hidden="true"></i>
+        <span>เลือกแล้ว <strong id="manikinSelectedCount">0</strong> ตัว</span>
+      </div>
       <div id="manikinOptions" class="row g-2 mb-2" data-selected="<?= h(implode(',', $oldManikinIds)) ?>" aria-live="polite">
         <div class="col-12 text-muted small">เลือกช่วงวันที่ก่อน เพื่อดูหุ่นที่ว่าง</div>
       </div>
-      <div id="manikinCount" class="form-text mb-3">เลือกได้หลายตัวโดยแตะ/คลิกที่ชื่อหุ่น</div>
+      <div class="form-text mb-3">เลือกได้หลายตัวโดยแตะ/คลิกที่ชื่อหุ่น</div>
       <label class="form-label fw-semibold">อุปกรณ์ที่ยืมเพิ่มเติม <span class="text-muted fw-normal">(ถ้ามี)</span></label>
-      <div id="extra">
-        <?php foreach ($oldItems as $i => $nm): ?>
-        <div class="row g-2 mb-2 extra-row">
-          <div class="col-8 col-md-9"><input name="item_name[]" class="form-control" placeholder="ชื่ออุปกรณ์ เช่น เครื่อง AED ฝึก" value="<?= h($nm) ?>" maxlength="200"></div>
-          <div class="col-4 col-md-3"><input type="number" name="item_qty[]" class="form-control" min="1" placeholder="จำนวน" value="<?= h($old['item_qty'][$i] ?? '') ?>"></div>
+      <div class="row g-2">
+        <?php foreach ($additionalItems as $item): ?>
+        <div class="col-12 col-sm-6">
+          <div class="border rounded-3 p-3 d-flex align-items-center gap-3">
+            <label class="d-flex align-items-center gap-2 mb-0 flex-grow-1" style="cursor:pointer">
+              <input type="checkbox" name="item_name[]" value="<?= h($item) ?>" class="form-check-input m-0" <?= in_array($item, $oldItems, true) ? 'checked' : '' ?>>
+              <span><?= h($item) ?></span>
+            </label>
+            <div class="input-group" style="width:145px">
+              <span class="input-group-text">จำนวน</span>
+              <input type="number" name="item_qty[<?= h($item) ?>]" class="form-control" min="1" value="<?= h($oldItemQty[$item] ?? 1) ?>" aria-label="จำนวน <?= h($item) ?>">
+            </div>
+          </div>
         </div>
         <?php endforeach; ?>
       </div>
-      <button type="button" class="btn btn-sm btn-outline-secondary" id="addRow"><i class="bi bi-plus-lg"></i> เพิ่มรายการ</button>
     </div></div>
 
     <div class="d-flex gap-2 justify-content-end mb-5">
@@ -82,7 +94,7 @@ if (!$oldItems) $oldItems = [''];
 (function () {
   var df = document.getElementById('df'), dt = document.getElementById('dt'), days = document.getElementById('days'),
       box = document.getElementById('availBox'), options = document.getElementById('manikinOptions'),
-      count = document.getElementById('manikinCount'),
+      selectedCountLabel = document.getElementById('manikinSelectedCount'),
       selectedInitially = options.getAttribute('data-selected').split(',').filter(Boolean),
       requestId = 0, loading = false;
   var submitButton = document.querySelector('#loanForm button[type="submit"]');
@@ -99,7 +111,7 @@ if (!$oldItems) $oldItems = [''];
       checkbox.closest('label').classList.toggle('border-primary', checkbox.checked);
       checkbox.closest('label').classList.toggle('bg-primary-subtle', checkbox.checked);
     });
-    count.textContent = 'เลือกแล้ว ' + selectedCount + ' ตัว';
+    selectedCountLabel.textContent = selectedCount;
     submitButton.disabled = loading || selectedCount === 0;
   }
 
@@ -194,13 +206,5 @@ if (!$oldItems) $oldItems = [''];
       });
   }
   df.addEventListener('change', update); dt.addEventListener('change', update); update();
-
-  document.getElementById('addRow').addEventListener('click', function () {
-    var rows = document.querySelectorAll('.extra-row');
-    if (rows.length >= 8) return;
-    var c = rows[0].cloneNode(true);
-    c.querySelectorAll('input').forEach(function (i) { i.value = ''; });
-    document.getElementById('extra').appendChild(c);
-  });
 })();
 </script>

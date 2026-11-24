@@ -7,6 +7,7 @@ $per = 15;
 
 $where = []; $params = [];
 if ($s === 'overdue') { $where[] = "status=1 AND due_date < ?"; $params[] = $today; }
+elseif ($s === '1') { $where[] = "status=1 AND (due_date >= ? OR due_date IS NULL)"; $params[] = $today; }
 elseif (in_array($s, ['0','1','2','3','4'], true)) { $where[] = "status = ?"; $params[] = (int)$s; }
 else $s = 'all';
 if ($q !== '') {
@@ -25,8 +26,10 @@ $rows = $st->fetchAll();
 
 $cnt = [];
 foreach ($pdo->query("SELECT status, COUNT(*) c FROM cpr_loans GROUP BY status") as $r) $cnt[(int)$r['status']] = (int)$r['c'];
+$currentSt = $pdo->prepare("SELECT COUNT(*) FROM cpr_loans WHERE status=1 AND (due_date >= ? OR due_date IS NULL)");
+$currentSt->execute([$today]);
 $od = $pdo->prepare("SELECT COUNT(*) FROM cpr_loans WHERE status=1 AND due_date < ?"); $od->execute([$today]);
-$tabs = ['all' => ['ทั้งหมด', array_sum($cnt)], '1' => ['กำลังยืม', $cnt[1] ?? 0],
+$tabs = ['all' => ['ทั้งหมด', array_sum($cnt)], '1' => ['กำลังยืม', (int)$currentSt->fetchColumn()],
          'overdue' => ['เกินกำหนด', (int)$od->fetchColumn()],
          '2' => ['คืนแล้ว', $cnt[2] ?? 0]];
 function lurl($s, $q, $p = 1) { return 'index.php?page=loans&s=' . urlencode($s) . '&q=' . urlencode($q) . '&p=' . $p; }
@@ -59,7 +62,8 @@ function lurl($s, $q, $p = 1) { return 'index.php?page=loans&s=' . urlencode($s)
       <td class="text-end text-nowrap">
         <a class="btn btn-sm btn-outline-secondary" href="index.php?page=loan_view&id=<?= $r['id'] ?>">ดู</a>
         <?php if ($r['status'] == 0): ?><a class="btn btn-sm btn-brand" href="index.php?page=loan_view&id=<?= $r['id'] ?>">อนุมัติ</a>
-        <?php elseif ($r['status'] == 4): ?><a class="btn btn-sm btn-success" href="index.php?page=return_form&id=<?= $r['id'] ?>">รับคืน</a><?php endif; ?>
+        <?php elseif ($r['status'] == 1): ?><a class="btn btn-sm btn-success" href="index.php?page=return_form&id=<?= $r['id'] ?>">บันทึกคืน</a>
+        <?php elseif ($r['status'] == 4): ?><a class="btn btn-sm btn-success" href="index.php?page=return_form&id=<?= $r['id'] ?>">ยืนยันรับคืน</a><?php endif; ?>
       </td>
     </tr>
   <?php endforeach; ?>

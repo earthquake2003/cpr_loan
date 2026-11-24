@@ -2,8 +2,8 @@
 $today = date('Y-m-d');
 $todayDate = new DateTimeImmutable($today);
 $monthStart = $todayDate->modify('first day of this month');
-$borrowedQtySt = $pdo->prepare("SELECT COALESCE(SUM(cpr_qty), 0) FROM cpr_loans WHERE status=1");
-$borrowedQtySt->execute();
+$borrowedQtySt = $pdo->prepare("SELECT COALESCE(SUM(cpr_qty), 0) FROM cpr_loans WHERE status=1 AND (due_date >= ? OR due_date IS NULL)");
+$borrowedQtySt->execute([$today]);
 $borrowedQty = (int)$borrowedQtySt->fetchColumn();
 $overdueQtySt = $pdo->prepare("SELECT COALESCE(SUM(cpr_qty), 0) FROM cpr_loans WHERE status=1 AND due_date < ?");
 $overdueQtySt->execute([$today]);
@@ -13,7 +13,6 @@ $avail = cpr_available($pdo, $today, $today);
 $registered = (int)$pdo->query("SELECT COUNT(*) FROM cpr_manikins")->fetchColumn();
 $inactive = max(0, $registered - $total);
 $busy = max(0, $total - $avail);
-$pending = $pdo->query("SELECT * FROM cpr_loans WHERE status=0 ORDER BY id DESC LIMIT 6")->fetchAll();
 $dueSt = $pdo->prepare("SELECT * FROM cpr_loans WHERE status IN (1,4) AND due_date <= ? ORDER BY due_date LIMIT 8");
 $dueSt->execute([date('Y-m-d', strtotime('+3 days'))]);
 $due = $dueSt->fetchAll();
@@ -64,21 +63,23 @@ $stockTotal = max(1, $registered);
 $availPct = $avail / $stockTotal * 100;
 $busyPct = $busy / $stockTotal * 100;
 $cards = [
-  ['กำลังยืม',          $borrowedQty, 'bi-box-arrow-up-right','#dbeafe', '#1d4ed8', 'loans&s=1'],
+  ['คงคลังทั้งหมด',     $registered, 'bi-box-seam',           '#dcfce7', '#15803d', 'manikins'],
+  ['กำลังถูกยืม',       $borrowedQty, 'bi-box-arrow-up-right','#dbeafe', '#1d4ed8', 'loans&s=1'],
+  ['คงเหลือวันนี้',      $avail,       'bi-check-circle',       '#fef3c7', '#b45309', 'manikins'],
   ['เกินกำหนดคืน',      $overdueQty,  'bi-exclamation-triangle','#fee2e2','#b91c1c', 'loans&s=overdue'],
 ];
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+<!-- <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div><h3 class="mb-0">แดชบอร์ด</h3><div class="text-muted small">ภาพรวมวันที่ <?= thdate($today) ?></div></div>
   
-</div>
+</div> -->
 
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4 mt-3">
   <?php foreach ($cards as [$t, $n, $ic, $bg, $fg, $link]): ?>
-  <div class="col-6 col-lg-6">
+  <div class="col-6 col-md-3">
     <a href="index.php?page=<?= $link ?>" class="text-decoration-none text-reset">
       <div class="card stat-card h-100"><div class="card-body d-flex justify-content-between align-items-center">
-        <div><div class="text-muted small mb-1"><?= $t ?></div><div class="stat-num" style="color:<?= $fg ?>"><?= $n ?></div></div>
+        <div><div class="text-muted small mb-1"><?= $t ?></div><div class="stat-num" style="color:<?= $fg ?>"><?= $n ?><small class="fs-6 ms-1 fw-normal">ตัว</small></div></div>
         <div class="stat-icon" style="background:<?= $bg ?>;color:<?= $fg ?>"><i class="bi <?= $ic ?>"></i></div>
       </div></div>
     </a>
@@ -87,9 +88,9 @@ $cards = [
 </div>
 
 <div class="row g-3">
-  <div class="col-lg-4">
+  <div class="col-lg-6">
     <div class="card h-100"><div class="card-body">
-      <h6><i class="bi bi-box-seam text-brand"></i> หุ่น CPR วันนี้</h6>
+      <h6><i class="bi bi-box-seam text-brand"></i> สถานะหุ่น CPR วันนี้</h6>
       <div class="stock-donut-wrap mt-3">
         <div class="stock-donut" role="img" aria-label="ว่าง <?= $avail ?> ตัว มีรายการจองหรือยืม <?= $busy ?> ตัว ปิดใช้งาน <?= $inactive ?> ตัว"
              style="background:conic-gradient(#16a34a 0 <?= $availPct ?>%, #f59e0b <?= $availPct ?>% <?= $availPct + $busyPct ?>%, #94a3b8 <?= $availPct + $busyPct ?>% 100%)">
@@ -102,34 +103,25 @@ $cards = [
         </div>
       </div>
       <?php if ($inactive): ?><div class="small text-muted mt-2">ระบบยังไม่มีสถานะซ่อมแยกต่างหาก ตัวเลขปิดใช้งานจึงไม่ระบุสาเหตุ</div><?php endif; ?>
-      <?php if (is_admin()): ?><a href="index.php?page=manikins" class="small">จัดการทะเบียนหุ่น</a><?php endif; ?>
     </div></div>
   </div>
-  <div class="col-lg-8">
-    <div class="card mb-3"><div class="card-body">
-      <h6><i class="bi bi-hourglass-split text-warning"></i> คำขอรอตรวจสอบ</h6>
-      <?php if (!$pending): ?><div class="text-muted small py-3">ไม่มีคำขอค้างอยู่ 🎉</div><?php else: ?>
-      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-        <tbody><?php foreach ($pending as $r): ?>
-          <tr><td><b><?= h($r['borrower_name']) ?></b><div class="small text-muted"><?= h($r['department']) ?></div></td>
-              <td class="small"><?= thdate($r['date_from']) ?> – <?= thdate($r['date_to']) ?><br><?= (int)$r['cpr_qty'] ?> ตัว</td>
-              <td class="text-end"><a class="btn btn-sm btn-brand" href="index.php?page=loan_view&id=<?= $r['id'] ?>">ตรวจสอบ</a></td></tr>
-        <?php endforeach; ?></tbody></table></div>
-      <?php endif; ?>
-    </div></div>
+  <div class="col-lg-6">
     <div class="card"><div class="card-body">
       <h6><i class="bi bi-calendar-event text-primary"></i> ใกล้ถึง/เลยกำหนดคืน (3 วัน)</h6>
       <?php if (!$due): ?><div class="text-muted small py-3">ไม่มีรายการ</div><?php else: ?>
       <div class="table-responsive"><table class="table table-hover align-middle mb-0">
         <tbody><?php foreach ($due as $r): $lateDays = $r['due_date'] < $today ? (int)$todayDate->diff(new DateTimeImmutable($r['due_date']))->days : 0; ?>
-          <tr><td><b><?= h($r['borrower_name']) ?></b><div class="small text-muted"><?= h($r['department']) ?></div></td>
+          <tr><td><div class="fw-bold text-brand"><?= h($r['department']) ?></div><div><?= h($r['borrower_name']) ?></div></td>
               <td class="small">กำหนดคืน <?= thdate($r['due_date']) ?></td>
               <td><?php if ($lateDays && (int)$r['status'] === 1): ?>
                 <span class="badge rounded-pill bg-danger">เกินมา <?= $lateDays ?> วัน</span>
                 <?php else: ?><?= status_badge($r) ?><?php if ($lateDays): ?><div class="small text-danger mt-1">เกินมา <?= $lateDays ?> วัน</div><?php endif; ?><?php endif; ?>
               </td>
               <td class="text-end text-nowrap">
-                <a class="btn btn-sm btn-outline-success" href="tel:<?= h($r['borrower_phone']) ?>" aria-label="โทรหา<?= h($r['borrower_name']) ?>"><i class="bi bi-telephone"></i> โทร</a>
+                <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#borrowerPhoneModal"
+                        data-phone="<?= h($r['borrower_phone']) ?>" aria-label="แสดงเบอร์โทรของ<?= h($r['borrower_name']) ?>">
+                  <i class="bi bi-telephone"></i> โทร
+                </button>
                 <!-- <?php if ((int)$r['status'] === 4): ?>
                 <a class="btn btn-sm btn-success" href="index.php?page=return_form&id=<?= (int)$r['id'] ?>"><i class="bi bi-box-arrow-in-down"></i> รับคืน</a>
                 <?php else: ?>
@@ -141,6 +133,33 @@ $cards = [
     </div></div>
   </div>
 </div>
+
+<div class="modal fade" id="borrowerPhoneModal" tabindex="-1" aria-labelledby="borrowerPhoneModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title fs-6" id="borrowerPhoneModalTitle">เบอร์โทรผู้ยืม</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="text-muted small mb-1">หมายเลขโทรศัพท์</div>
+        <div id="borrowerPhoneNumber" class="fs-4 fw-semibold"></div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var modal = document.getElementById('borrowerPhoneModal');
+  modal.addEventListener('show.bs.modal', function (event) {
+    var phone = event.relatedTarget.getAttribute('data-phone');
+    document.getElementById('borrowerPhoneNumber').textContent = phone;
+  });
+})();
+</script>
 
 <div class="row g-3 mt-0">
   <div class="col-12">

@@ -117,6 +117,7 @@ INSERT INTO `cpr_loan_manikins` (`loan_id`, `manikin_id`, `manikin_name`) VALUES
 CREATE TABLE `cpr_manikins` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
+  `details` text DEFAULT NULL,
   `is_active` tinyint(4) NOT NULL DEFAULT 1,
   `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

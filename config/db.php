@@ -10,7 +10,7 @@ const COND = [1 => 'สมบูรณ์', 2 => 'ชำรุด', 3 => 'สู
 // สถานะ => [ข้อความ, สี bootstrap, ไอคอน]
 const STATUS = [
     0 => ['รอตรวจสอบ',            'warning text-dark', 'bi-hourglass-split'],
-    1 => ['อนุมัติ / กำลังยืม',    'primary',           'bi-box-arrow-up-right'],
+    1 => ['กำลังยืม',               'primary',           'bi-box-arrow-up-right'],
     4 => ['แจ้งคืนแล้ว รอยืนยัน',  'info text-dark',    'bi-box-arrow-in-down'],
     2 => ['คืนแล้ว',               'success',           'bi-check-circle'],
     3 => ['ไม่อนุมัติ',            'secondary',         'bi-x-circle'],

@@ -72,7 +72,10 @@ try {
     $ins = $pdo->prepare("INSERT INTO cpr_loan_items (loan_id, item_name, qty) VALUES (?,?,?)");
     foreach (array_slice($p['item_name'] ?? [], 0, 8, true) as $i => $n) {
         $n = trim($n);
-        if ($n !== '') $ins->execute([$loanId, mb_substr($n, 0, 200), max(1, (int)($p['item_qty'][$i] ?? 1))]);
+        if ($n !== '') {
+            $qty = $p['item_qty'][$n] ?? $p['item_qty'][$i] ?? 1;
+            $ins->execute([$loanId, mb_substr($n, 0, 200), max(1, (int)$qty)]);
+        }
     }
     $pdo->commit();
 } catch (Exception $e) {
