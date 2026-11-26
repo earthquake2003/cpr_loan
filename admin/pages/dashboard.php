@@ -2,17 +2,48 @@
 $today = date('Y-m-d');
 $todayDate = new DateTimeImmutable($today);
 $monthStart = $todayDate->modify('first day of this month');
-$borrowedQtySt = $pdo->prepare("SELECT COALESCE(SUM(cpr_qty), 0) FROM cpr_loans WHERE status=1 AND (due_date >= ? OR due_date IS NULL)");
-$borrowedQtySt->execute([$today]);
-$borrowedQty = (int)$borrowedQtySt->fetchColumn();
-$overdueQtySt = $pdo->prepare("SELECT COALESCE(SUM(cpr_qty), 0) FROM cpr_loans WHERE status=1 AND due_date < ?");
-$overdueQtySt->execute([$today]);
-$overdueQty = (int)$overdueQtySt->fetchColumn();
-$total = cpr_total($pdo);
+$loanStatusSt = $pdo->prepare("SELECT
+    COALESCE(SUM(CASE WHEN status = 0 THEN cpr_qty ELSE 0 END), 0) AS pending_qty,
+    COALESCE(SUM(CASE WHEN status = 1 AND (due_date >= ? OR due_date IS NULL) THEN cpr_qty ELSE 0 END), 0) AS borrowed_qty,
+    COALESCE(SUM(CASE WHEN status = 1 AND due_date < ? THEN cpr_qty ELSE 0 END), 0) AS overdue_qty,
+    COALESCE(SUM(CASE WHEN status = 4 THEN cpr_qty ELSE 0 END), 0) AS returning_qty
+    FROM cpr_loans WHERE status IN (0, 1, 4)");
+$loanStatusSt->execute([$today, $today]);
+$loanStatus = $loanStatusSt->fetch();
+$pendingQty = (int)$loanStatus['pending_qty'];
+$borrowedQty = (int)$loanStatus['borrowed_qty'];
+$overdueQty = (int)$loanStatus['overdue_qty'];
+$returningQty = (int)$loanStatus['returning_qty'];
+$activeLoanQty = $pendingQty + $borrowedQty + $overdueQty + $returningQty;
+$loanStatusItems = [
+    ['label' => 'รอตรวจสอบ', 'qty' => $pendingQty, 'color' => '#f59e0b', 'dot' => 'bg-warning'],
+    ['label' => 'กำลังยืม', 'qty' => $borrowedQty, 'color' => '#2563eb', 'dot' => 'bg-primary'],
+    ['label' => 'เกินกำหนดคืน', 'qty' => $overdueQty, 'color' => '#dc2626', 'dot' => 'bg-danger'],
+    ['label' => 'รอยืนยันคืน', 'qty' => $returningQty, 'color' => '#0891b2', 'dot' => 'bg-info'],
+];
+$loanStatusSegments = array_values(array_filter($loanStatusItems, function ($item) {
+    return $item['qty'] > 0;
+}));
+$loanStatusGradient = '#e2e8f0';
+$loanStatusLabel = 'ไม่มีใบยืมที่ยังดำเนินการ';
+if ($activeLoanQty > 0) {
+    $gradientStops = [];
+    $cumulativePct = 0;
+    foreach ($loanStatusSegments as $index => $item) {
+        $startPct = number_format($cumulativePct, 4, '.', '');
+        $cumulativePct += $item['qty'] / $activeLoanQty * 100;
+        $endPct = $index === count($loanStatusSegments) - 1
+            ? '100'
+            : number_format($cumulativePct, 4, '.', '');
+        $gradientStops[] = "{$item['color']} {$startPct}% {$endPct}%";
+    }
+    $loanStatusGradient = 'conic-gradient(' . implode(', ', $gradientStops) . ')';
+    $loanStatusLabel = implode(' ', array_map(function ($item) {
+        return $item['label'] . ' ' . $item['qty'] . ' ตัว';
+    }, $loanStatusSegments)) . ' รวม ' . $activeLoanQty . ' ตัว';
+}
 $avail = cpr_available($pdo, $today, $today);
 $registered = (int)$pdo->query("SELECT COUNT(*) FROM cpr_manikins")->fetchColumn();
-$inactive = max(0, $registered - $total);
-$busy = max(0, $total - $avail);
 $dueSt = $pdo->prepare("SELECT * FROM cpr_loans WHERE status IN (1,4) AND due_date <= ? ORDER BY due_date LIMIT 8");
 $dueSt->execute([date('Y-m-d', strtotime('+3 days'))]);
 $due = $dueSt->fetchAll();
@@ -59,9 +90,6 @@ $legacySt = $pdo->prepare("SELECT COALESCE(SUM(legacy_qty), 0) FROM (
 ) legacy_loans");
 $legacySt->execute([$timelineEnd->format('Y-m-d'), $today, $monthStart->format('Y-m-d')]);
 $legacyQty = (int)$legacySt->fetchColumn();
-$stockTotal = max(1, $registered);
-$availPct = $avail / $stockTotal * 100;
-$busyPct = $busy / $stockTotal * 100;
 $cards = [
   ['คงคลังทั้งหมด',     $registered, 'bi-box-seam',           '#dcfce7', '#15803d', 'manikins'],
   ['กำลังถูกยืม',       $borrowedQty, 'bi-box-arrow-up-right','#dbeafe', '#1d4ed8', 'loans&s=1'],
@@ -90,19 +118,22 @@ $cards = [
 <div class="row g-3">
   <div class="col-lg-6">
     <div class="card h-100"><div class="card-body">
-      <h6><i class="bi bi-box-seam text-brand"></i> สถานะหุ่น CPR วันนี้</h6>
+      <h6><i class="bi bi-box-seam text-brand"></i> สถานะหุ่นในใบยืมที่ยังดำเนินการ</h6>
       <div class="stock-donut-wrap mt-3">
-        <div class="stock-donut" role="img" aria-label="ว่าง <?= $avail ?> ตัว มีรายการจองหรือยืม <?= $busy ?> ตัว ปิดใช้งาน <?= $inactive ?> ตัว"
-             style="background:conic-gradient(#16a34a 0 <?= $availPct ?>%, #f59e0b <?= $availPct ?>% <?= $availPct + $busyPct ?>%, #94a3b8 <?= $availPct + $busyPct ?>% 100%)">
-          <div class="stock-donut-center"><b><?= $registered ?></b><span>ทั้งหมด</span></div>
+        <div class="stock-donut" role="img" aria-label="<?= h($loanStatusLabel) ?>"
+             style="background:<?= $loanStatusGradient ?>">
+          <div class="stock-donut-center"><b><?= $activeLoanQty ?></b><span>ตัวในใบยืม</span></div>
         </div>
+        <?php if ($loanStatusSegments): ?>
         <div class="stock-legend small">
-          <div><i class="stock-dot bg-success"></i> ว่าง <b><?= $avail ?></b></div>
-          <div><i class="stock-dot bg-warning"></i> มีรายการจอง/ยืม <b><?= $busy ?></b></div>
-          <div><i class="stock-dot bg-secondary"></i> ปิดใช้งาน <b><?= $inactive ?></b></div>
+          <?php foreach ($loanStatusSegments as $item): ?>
+          <div><i class="stock-dot <?= $item['dot'] ?>"></i> <?= h($item['label']) ?> <b><?= $item['qty'] ?></b></div>
+          <?php endforeach; ?>
         </div>
+        <?php else: ?>
+        <div class="small text-muted">ไม่มีใบยืมที่ยังดำเนินการ</div>
+        <?php endif; ?>
       </div>
-      <?php if ($inactive): ?><div class="small text-muted mt-2">ระบบยังไม่มีสถานะซ่อมแยกต่างหาก ตัวเลขปิดใช้งานจึงไม่ระบุสาเหตุ</div><?php endif; ?>
     </div></div>
   </div>
   <div class="col-lg-6">
@@ -164,7 +195,7 @@ $cards = [
 <div class="row g-3 mt-0">
   <div class="col-12">
     <div class="card"><div class="card-body">
-      <h6><i class="bi bi-bar-chart-line text-primary"></i> การยืมที่อนุมัติรายเดือน (12 เดือนล่าสุด)hahaha</h6>
+      <h6><i class="bi bi-bar-chart-line text-primary"></i> การยืมที่อนุมัติรายเดือน (12 เดือนล่าสุด)</h6>
       <div class="monthly-chart mt-3">
         <?php foreach ($monthCounts as $key => $count): $barHeight = $count ? max(4, round($count / $monthMax * 100)) : 0; ?>
         <div class="monthly-chart-item" title="<?= h($monthLabels[$key]['name'] . ' ' . $monthLabels[$key]['year'] . ': ' . $count . ' รายการ') ?>">

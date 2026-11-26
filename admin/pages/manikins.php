@@ -48,7 +48,7 @@ $manikins = $pdo->query('SELECT id, name, details, is_active FROM cpr_manikins O
 </div></div>
 
 <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
-  <thead><tr><th>ชื่อหุ่น</th><th>สถานะ</th><th class="text-end">จัดการ</th></tr></thead>
+  <thead><tr><th>รายการหุ่น</th><th>สถานะ</th><th class="text-end">จัดการ</th></tr></thead>
   <tbody>
   <?php if (!$manikins): ?>
     <tr><td colspan="3" class="text-center text-muted py-4">ยังไม่มีทะเบียนหุ่น CPR</td></tr>

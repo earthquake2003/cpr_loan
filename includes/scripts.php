@@ -13,4 +13,21 @@ document.querySelectorAll('select[data-cond]').forEach(function (sel) {
   function sync() { detail.required = sel.value !== '1'; if (sel.value !== '1') detail.classList.add('border-danger'); else detail.classList.remove('border-danger'); }
   sel.addEventListener('change', sync); sync();
 });
+document.querySelectorAll('[data-confirm-logout]').forEach(function (link) {
+  link.addEventListener('click', function (event) {
+    event.preventDefault();
+    Swal.fire({
+      icon: 'question',
+      title: 'ยืนยันออกจากระบบ?',
+      text: 'คุณต้องการออกจากระบบใช่หรือไม่',
+      showCancelButton: true,
+      confirmButtonText: 'ออกจากระบบ',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#64748b'
+    }).then(function (result) {
+      if (result.isConfirmed) window.location.href = link.href;
+    });
+  });
+});
 </script>

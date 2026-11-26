@@ -30,9 +30,19 @@ function nav_cls($page, $names) { return in_array($page, (array)$names, true) ? 
         <li class="nav-item"><a class="nav-link" href="index.php?page=loan_form"><i class="bi bi-plus-circle"></i> บันทึกการยืม</a></li>
         <li class="nav-item"><a class="nav-link <?= nav_cls($page, 'manikins') ?>" href="index.php?page=manikins"><i class="bi bi-person-standing"></i> จัดการหุ่น CPR</a></li>
       </ul>
-      <div class="d-flex align-items-center gap-2 text-light small">
-        <span><i class="bi bi-person-circle"></i> <?= h(current_user()) ?></span>
-        <a class="btn btn-sm btn-danger" href="index.php?page=logout">ออกจากระบบ</a>
+      <div class="d-flex align-items-center gap-2">
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-2" type="button"
+                  id="adminProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle"></i>
+            <span><?= h($_SESSION['user']['username'] ?? '') ?></span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="adminProfileDropdown">
+            <li><a class="dropdown-item" href="index.php?page=profile"><i class="bi bi-person-vcard me-2"></i>ดูโปรไฟล์</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="index.php?page=logout" data-confirm-logout><i class="bi bi-box-arrow-right me-2"></i>ออกจากระบบ</a></li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
