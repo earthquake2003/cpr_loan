@@ -164,7 +164,7 @@ $cards = [
 <div class="row g-3 mt-0">
   <div class="col-12">
     <div class="card"><div class="card-body">
-      <h6><i class="bi bi-bar-chart-line text-primary"></i> การยืมที่อนุมัติรายเดือน (12 เดือนล่าสุด)</h6>
+      <h6><i class="bi bi-bar-chart-line text-primary"></i> การยืมที่อนุมัติรายเดือน (12 เดือนล่าสุด)hahaha</h6>
       <div class="monthly-chart mt-3">
         <?php foreach ($monthCounts as $key => $count): $barHeight = $count ? max(4, round($count / $monthMax * 100)) : 0; ?>
         <div class="monthly-chart-item" title="<?= h($monthLabels[$key]['name'] . ' ' . $monthLabels[$key]['year'] . ': ' . $count . ' รายการ') ?>">
